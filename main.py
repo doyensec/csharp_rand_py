@@ -11,63 +11,6 @@ def sample_seed(seed, i):
     else:
         subtraction = abs(seed)
 
-    # this is what the seed array will be
-    # sa3__1 = (1421239448 + 33173928 * subtraction) % MBIG
-    # sa3__2 = (1690538477 + 865455699 * subtraction) % MBIG
-    # sa3__3 = (375638254 + 1028859030 * subtraction) % MBIG
-    # sa3__4 = (2000099944 + 1284994575 * subtraction) % MBIG
-    # sa3__5 = (1824227375 + 500080187 * subtraction) % MBIG
-    # sa3__6 = (1827648813 + 1809347561 * subtraction) % MBIG
-    # sa3__7 = (1074261432 + 326699238 * subtraction) % MBIG
-    # sa3__8 = (756537524 + 416727394 * subtraction) % MBIG
-    # sa3__9 = (1452186574 + 127074781 * subtraction) % MBIG
-    # sa3_10 = (832354089 + 729461717 * subtraction) % MBIG
-    # sa3_11 = (1599697867 + 1666899315 * subtraction) % MBIG
-    # sa3_12 = (1840554554 + 2015209127 * subtraction) % MBIG
-    # sa3_13 = (1945466017 + 280234821 * subtraction) % MBIG
-    # sa3_14 = (26876081 + 1220209853 * subtraction) % MBIG
-    # sa3_15 = (1651586209 + 1372849741 * subtraction) % MBIG
-    # sa3_16 = (725122553 + 1783379287 * subtraction) % MBIG
-    # sa3_17 = (2061339384 + 997579958 * subtraction) % MBIG
-    # sa3_18 = (1364770206 + 1717477203 * subtraction) % MBIG
-    # sa3_19 = (2021440089 + 1924825977 * subtraction) % MBIG
-    # sa3_20 = (1844539912 + 1149294787 * subtraction) % MBIG
-    # sa3_21 = (1086044294 + 859749576 * subtraction) % MBIG
-    # sa3_22 = (86045080 + 1563220509 * subtraction) % MBIG
-    # sa3_23 = (1492869096 + 1253593430 * subtraction) % MBIG
-    # sa3_24 = (310631935 + 829551692 * subtraction) % MBIG
-    # sa3_25 = (1358980938 + 478857727 * subtraction) % MBIG
-    # sa3_26 = (1830701958 + 1321119334 * subtraction) % MBIG
-    # sa3_27 = (1847676564 + 1520389438 * subtraction) % MBIG
-    # sa3_28 = (723229640 + 837683034 * subtraction) % MBIG
-    # sa3_29 = (1075103056 + 333384825 * subtraction) % MBIG
-    # sa3_30 = (1660386044 + 1313147514 * subtraction) % MBIG
-    # sa3_31 = (1339647823 + 655428663 * subtraction) % MBIG
-    # sa3_32 = (2128185620 + 1185029587 * subtraction) % MBIG
-    # sa3_33 = (925210790 + 984987374 * subtraction) % MBIG
-    # sa3_34 = (376385315 + 358199081 * subtraction) % MBIG
-    # sa3_35 = (883014450 + 1343399633 * subtraction) % MBIG
-    # sa3_36 = (316400275 + 237354582 * subtraction) % MBIG
-    # sa3_37 = (926512878 + 1230420470 * subtraction) % MBIG
-    # sa3_38 = (1669922625 + 615900362 * subtraction) % MBIG
-    # sa3_39 = (239691816 + 1416192770 * subtraction) % MBIG
-    # sa3_40 = (741148003 + 1274658414 * subtraction) % MBIG
-    # sa3_41 = (456752873 + 1140428625 * subtraction) % MBIG
-    # sa3_42 = (1508977629 + 47771238 * subtraction) % MBIG
-    # sa3_43 = (622831658 + 353550263 * subtraction) % MBIG
-    # sa3_44 = (586056905 + 182262572 * subtraction) % MBIG
-    # sa3_45 = (373796435 + 378698614 * subtraction) % MBIG
-    # sa3_46 = (443755075 + 1293975888 * subtraction) % MBIG
-    # sa3_47 = (1092806171 + 1457266301 * subtraction) % MBIG
-    # sa3_48 = (340054249 + 320476606 * subtraction) % MBIG
-    # sa3_49 = (195417944 + 1196203517 * subtraction) % MBIG
-    # sa3_50 = (1605856671 + 918147337 * subtraction) % MBIG
-    # sa3_51 = (286007796 + 2001937008 * subtraction) % MBIG
-    # sa3_52 = (1139606199 + 1047914716 * subtraction) % MBIG
-    # sa3_53 = (205103151 + 1689492340 * subtraction) % MBIG
-    # sa3_54 = (335250606 + 2003236788 * subtraction) % MBIG
-    # sa3_55 = (1960695162 + 1659957022 * subtraction) % MBIG
-
     # first 33 results from the PRNG
     ret_nums = [
       (1121899819, 1559595546),
@@ -149,10 +92,109 @@ def invert_sample(rand, i):
     mul, add = ret_nums[i]
     return (add + mul * rand) % MBIG
 
+class rand_vec:
+    p = 2147483647
+    def __init__(self, mul, add):
+        self.mul = mul % self.p # multiplicitive componenet
+        self.add = add % self.p  # additive component
+
+    def __add__(self, other):
+        return rand_vec(self.mul + other.mul, self.add + other.add)
+
+    def __sub__(self, other):
+        return rand_vec(self.mul - other.mul, self.add - other.add)
+
+    def resolve(self, seed) -> int:
+        return (self.mul * seed + self.add) % self.p
+
+    def __str__(self):
+        return f"seed * {self.mul} + {self.add}"
+
+class fakerand:
+    sa = {
+        0:  rand_vec(0, 0), # initilaized to 0 in C#, so... maybe this works? 
+        1:  rand_vec(995627988, 1440537475),
+        2:  rand_vec(2027951972, 765327687),
+        3:  rand_vec(670659949, 2146736586),
+        4:  rand_vec(2089078589, 1117085494),
+        5:  rand_vec(262725605, 1507827100),
+        6:  rand_vec(578927091, 901135935),
+        7:  rand_vec(1858282523, 1551822454),
+        8:  rand_vec(1148018271, 516845708),
+        9:  rand_vec(999900014, 711038571),
+        10: rand_vec(1736516739, 375601216),
+        11: rand_vec(1619128077, 90720238),
+        12: rand_vec(1661658864, 1217722896),
+        13: rand_vec(97972249, 1359409112),
+        14: rand_vec(841511239, 1800563293),
+        15: rand_vec(78873853, 1207831134),
+        16: rand_vec(326112986, 1779800029),
+        17: rand_vec(677103352, 1721285135),
+        18: rand_vec(521273686, 1169352262),
+        19: rand_vec(1006678640, 415583418),
+        20: rand_vec(1294841426, 1558532116),
+        21: rand_vec(1959318507, 2093921742),
+        22: rand_vec(2021211816, 2028425576),
+        23: rand_vec(1397840289, 1157618490),
+        24: rand_vec(1317078317, 497420420),
+        25: rand_vec(1630713386, 2065927110),
+        26: rand_vec(1440651009, 1065374271),
+        27: rand_vec(849729489, 1848423625),
+        28: rand_vec(896088092, 1753627793),
+        29: rand_vec(70659220, 1714759603),
+        30: rand_vec(734220423, 759250109),
+        31: rand_vec(944629787, 1935309016),
+        32: rand_vec(37011316, 1611339912),
+        33: rand_vec(2132571007, 214172219),
+        34: rand_vec(769165989, 784099),
+        35: rand_vec(1871755203, 792294212),
+        36: rand_vec(723179365, 1246161026),
+        37: rand_vec(1132448221, 1714587413),
+        38: rand_vec(1921872770, 2016842979),
+        39: rand_vec(1337318917, 1179344329),
+        40: rand_vec(948545428, 1108831621),
+        41: rand_vec(463325273, 882951385),
+        42: rand_vec(1673981199, 339625367),
+        43: rand_vec(1494355270, 207248240),
+        44: rand_vec(1034904793, 1175008436),
+        45: rand_vec(566863754, 427358340),
+        46: rand_vec(1420247719, 562813146),
+        47: rand_vec(59426012, 2082671328),
+        48: rand_vec(1150881936, 1990117476),
+        49: rand_vec(1712973778, 276974481),
+        50: rand_vec(1624979975, 540482400),
+        51: rand_vec(1152207519, 585067818),
+        52: rand_vec(151826624, 1533462053),
+        53: rand_vec(1618833120, 637827195),
+        54: rand_vec(1269016365, 1723484144),
+        55: rand_vec(715327235, 25386146),
+    }
+
+    def get_seed_array_i(self, i: int) -> rand_vec:
+        if i in self.sa.keys():
+            return self.sa[i]
+        raise Exception("Can't do that yet...")
+
+    def get_nums_for_ret_i(self, rand_i: int) -> rand_vec:
+        """
+        What constants are needed to produce the `i`th PRNG from Random?
+        """
+        a = self.get_seed_array_i((rand_i + 1) % 56)
+        print(a)
+        b = self.get_seed_array_i((rand_i + 22) % 56)
+        print(b)
+        print("a - b = ", a - b)
+        return a - b
+
+
+    def big_sample_i(self, seed, i) -> int:
+        return self.get_nums_for_ret_i(i).resolve(seed)
+
 
 def sample_all(seed):
     for i in range(34):
         yield sample_seed(seed, i)
+
 
 def test_sampel_seed():
     import json
@@ -167,12 +209,31 @@ def test_sampel_seed():
             if my_r != r:
                 raise Exception("sample_seed test failed on\n    sample(%d)[%d] == %d should be %d" % (seed, ri, my_r, r))
 
+    rc = fakerand()
     for seed in range(4096 * 16):
         for i in range(34):
             r = sample_seed(seed, i)
             inv_r = invert_sample(r, i)
+            r2 = rc.big_sample_i(seed, i)
             if  inv_r != seed:
                 raise Exception("Inversion test failed on seed: %d rand: %d i: %d inv: %d" % (seed, r, i, inv_r))
+            elif r2 != r:
+                raise Exception("big_sample_seed test failed on seed: %d rand: %d i: %d inv: %d" % (seed, r, i, inv_r))
 
-test_sampel_seed()
 
+def test_big_sample():
+    import json
+    rc = fakerand()
+    with open("tests2.json") as fp:
+        for test in json.load(fp):
+            seed = test["seed"]
+            for i, rand in enumerate(test["values"]):
+                my_rand = rc.big_sample_i(seed, i)
+                if my_rand != rand:
+                    raise Exception("Missed one: my_rand: %d != %d (seed: %d, i:%d)" % (my_rand, rand, seed, i))
+            break
+
+
+# test_sampel_seed()
+
+test_big_sample()
