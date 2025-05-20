@@ -1,97 +1,5 @@
 
 
-MBIG = 2147483647
-# return the ith prng value with seed=seed
-# ie sample_seed(42, 2) is like `r = new Random(42); r.Next(); r.Next(); return r.Next()`
-def sample_seed(seed, i):
-    Int32MinValue = -2147483648
-    # same as 5 but last loops unwound
-    if seed == Int32MinValue:
-        subtraction = MBIG
-    else:
-        subtraction = abs(seed)
-
-    # first 33 results from the PRNG
-    ret_nums = [
-      (1121899819, 1559595546),
-      (630111683, 1755192844),
-      (1501065279, 1649316166),
-      (458365203, 1198642031),
-      (969558243, 442452829),
-      (1876681249, 1200195957),
-      (962194431, 1945678308),
-      (1077359051, 949569752),
-      (265679591, 2099272109),
-      (791886952, 587775847),
-      (1582116761, 626863973),
-      (1676571504, 1003550677),
-      (1476289907, 1358625013),
-      (1117239683, 1008269081),
-      (1503178135, 2109153755),
-      (1341148412, 65212616),
-      (902714229, 1851925803),
-      (1331438416, 2137491580),
-      (58133212, 1454235444),
-      (831516153, 675580731),
-      (285337308, 1754296375),
-      (526856546, 1821177336),
-      (362935496, 2130093701),
-      (750214563, 70062080),
-      (210465667, 1503113964),
-      (1381224997, 1130186590),
-      (1846331200, 2005789796),
-      (1330597961, 1476653312),
-      (593162892, 1174277203),
-      (1729496551, 174182291),
-      (792803163, 401846963),
-      (565661843, 973512717),
-      (863554642, 638171722),
-      (53838754, 2122881600),
-    ]
-    mul, add = ret_nums[i]
-    return (add + mul * subtraction) % MBIG
-
-# invert prng, ie: invert_sample(sample_seed(seed, n), n) == x
-def invert_sample(rand, i):
-    ret_nums = [
-        (1796695496, 1821612595),
-        (1891800662, 1409645351),
-        (1610885040, 587487227),
-        (1696684875, 1455237719),
-        (2130791390, 767595827),
-        (1929834895, 129867698),
-        (2121031305, 1742476897),
-        (883591791, 2106280948),
-        (648963137, 1348178552),
-        (795631511, 1633747307),
-        (796601229, 1716765365),
-        (816410995, 1096882805),
-        (1918475170, 1559029571),
-        (381881470, 1466324819),
-        (641551938, 297465690),
-        (316080314, 75192552),
-        (270400817, 1823883914),
-        (1585239219, 729323790),
-        (2120325298, 2118823669),
-        (230186630, 726040245),
-        (547167837, 1241601023),
-        (2138164393, 2086904121),
-        (213491428, 315710936),
-        (729980750, 468302249),
-        (1512126699, 1259943578),
-        (1739690517, 1712653821),
-        (918222596, 653087170),
-        (157253577, 2061948226),
-        (970904747, 309988906),
-        (1801285644, 1451072879),
-        (584087765, 1485089530),
-        (1256192415, 888247729),
-        (1100808447, 2137905013),
-        (1705889883, 643403504),
-    ]
-    mul, add = ret_nums[i]
-    return (add + mul * rand) % MBIG
-
 class rand_vec:
     p = 2147483647
     def __init__(self, mul, add):
@@ -115,7 +23,7 @@ class rand_vec:
         inv_add = (-1 * self.add * inv_mul) % self.p
         return rand_vec(inv_mul, inv_add)
 
-class fakerand:
+class csharp_rand:
     sa = {
         0: 42,
         # the zero element is never used?!?!?!
@@ -199,49 +107,17 @@ class fakerand:
         return self.sample_equation(i).invert().resolve(rand)
 
 
-def sample_all(seed):
-    for i in range(34):
-        yield sample_seed(seed, i)
-
-
-def test_sampel_seed():
+def test_rand():
     import json
+    rc = csharp_rand()
     with open("tests.json") as fp:
-        test_data = json.load(fp)
-
-    for _seed, rands in test_data.items():
-        seed = int(_seed)
-        for ri, my_r in enumerate(sample_all(seed)):
-            r = rands[ri]
-            # print("sample(%d) == %d should be %d" % (seed, my_r, r))
-            if my_r != r:
-                raise Exception("sample_seed test failed on\n    sample(%d)[%d] == %d should be %d" % (seed, ri, my_r, r))
-
-    rc = fakerand()
-    for seed in range(4096 * 16):
-        for i in range(34):
-            r = sample_seed(seed, i)
-            inv_r = invert_sample(r, i)
-            r2 = rc.sample(seed, i)
-            if  inv_r != seed:
-                raise Exception("Inversion test failed on seed: %d rand: %d i: %d inv: %d" % (seed, r, i, inv_r))
-            elif r2 != r:
-                raise Exception("big_sample_seed test failed on seed: %d rand: %d i: %d inv: %d" % (seed, r, i, inv_r))
-
-
-def test_big_sample():
-    import json
-    rc = fakerand()
-    with open("tests2.json") as fp:
         for test in json.load(fp):
             seed = test["seed"]
             for i, rand in enumerate(test["values"]):
                 my_rand = rc.sample(seed, i)
                 if my_rand != rand:
                     raise Exception("Missed one: my_rand: %d != %d (seed: %d, i:%d)" % (my_rand, rand, seed, i))
-                # print("seed: %d i: %d good" % (seed, i))
+                if seed != rc.inv(my_rand, i):
+                    raise Exception("Inversion failed: my_rand: %d != %d (seed: %d, i:%d)" % (my_rand, rand, seed, i))
 
-
-# test_sampel_seed()
-
-test_big_sample()
+test_rand()
