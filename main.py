@@ -110,6 +110,11 @@ class rand_vec:
     def __str__(self):
         return f"seed * {self.mul} + {self.add}"
 
+    def invert(self):
+        inv_mul = pow(self.mul, self.p - 2, self.p)
+        inv_add = (-1 * self.add * inv_mul) % self.p
+        return rand_vec(inv_mul, inv_add)
+
 class fakerand:
     sa = {
         0: 42,
@@ -173,34 +178,25 @@ class fakerand:
         55: rand_vec(715327235, 25386146),
     }
 
-    def get_seed_array_i(self, i: int) -> rand_vec:
-        if i in self.sa.keys():
-            return self.sa[i]
-        raise Exception("Can't do that yet...")
-
-    def get_rand_index(self, rand_i: int) -> rand_vec:
-        sa_indx = 56 + rand_i
-        return self.sa.get(sa_indx, None)
-
-    def cache_ret(self, rand_i: int, val: rand_vec) -> None:
-        sa_indx = 56 + rand_i
-        self.sa[sa_indx] = val
-
-    def get_nums_for_ret_i(self, rand_i: int) -> rand_vec:
+    def sample_equation(self, rand_i: int) -> rand_vec:
         """
         What constants are needed to produce the `i`th PRNG from Random?
         """
-        if ret := self.get_rand_index(rand_i):
+        sa_indx = rand_i + 56
+        if ret := self.sa.get(sa_indx, None):  # try from cache
             return ret
 
-        a = self.get_seed_array_i(rand_i + 1)
-        b = self.get_seed_array_i(rand_i + 22)
+        a = self.sample_equation(rand_i - 55)
+        b = self.sample_equation(rand_i - 34)  # ie: SeedArray[rand_i + 21]
         ret = a - b
-        self.cache_ret(rand_i, ret)
+        self.sa[sa_indx] = ret  # cache for later
         return ret
 
-    def big_sample_i(self, seed, i) -> int:
-        return self.get_nums_for_ret_i(i).resolve(seed)
+    def sample(self, seed, i) -> int:
+        return self.sample_equation(i).resolve(seed)
+
+    def inv(self, rand, i) -> int:
+        return self.sample_equation(i).invert().resolve(rand)
 
 
 def sample_all(seed):
@@ -226,7 +222,7 @@ def test_sampel_seed():
         for i in range(34):
             r = sample_seed(seed, i)
             inv_r = invert_sample(r, i)
-            r2 = rc.big_sample_i(seed, i)
+            r2 = rc.sample(seed, i)
             if  inv_r != seed:
                 raise Exception("Inversion test failed on seed: %d rand: %d i: %d inv: %d" % (seed, r, i, inv_r))
             elif r2 != r:
@@ -240,9 +236,10 @@ def test_big_sample():
         for test in json.load(fp):
             seed = test["seed"]
             for i, rand in enumerate(test["values"]):
-                my_rand = rc.big_sample_i(seed, i)
+                my_rand = rc.sample(seed, i)
                 if my_rand != rand:
                     raise Exception("Missed one: my_rand: %d != %d (seed: %d, i:%d)" % (my_rand, rand, seed, i))
+                # print("seed: %d i: %d good" % (seed, i))
 
 
 # test_sampel_seed()
