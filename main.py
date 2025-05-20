@@ -112,7 +112,10 @@ class rand_vec:
 
 class fakerand:
     sa = {
-        0:  rand_vec(0, 0), # initilaized to 0 in C#, so... maybe this works? 
+        0: 42,
+        # the zero element is never used?!?!?!
+        # it's existence in the array from the original C# is wasted space
+        # I include it here none the less, for solidarity
         1:  rand_vec(995627988, 1440537475),
         2:  rand_vec(2027951972, 765327687),
         3:  rand_vec(670659949, 2146736586),
@@ -175,17 +178,26 @@ class fakerand:
             return self.sa[i]
         raise Exception("Can't do that yet...")
 
+    def get_rand_index(self, rand_i: int) -> rand_vec:
+        sa_indx = 56 + rand_i
+        return self.sa.get(sa_indx, None)
+
+    def cache_ret(self, rand_i: int, val: rand_vec) -> None:
+        sa_indx = 56 + rand_i
+        self.sa[sa_indx] = val
+
     def get_nums_for_ret_i(self, rand_i: int) -> rand_vec:
         """
         What constants are needed to produce the `i`th PRNG from Random?
         """
-        a = self.get_seed_array_i((rand_i + 1) % 56)
-        print(a)
-        b = self.get_seed_array_i((rand_i + 22) % 56)
-        print(b)
-        print("a - b = ", a - b)
-        return a - b
+        if ret := self.get_rand_index(rand_i):
+            return ret
 
+        a = self.get_seed_array_i(rand_i + 1)
+        b = self.get_seed_array_i(rand_i + 22)
+        ret = a - b
+        self.cache_ret(rand_i, ret)
+        return ret
 
     def big_sample_i(self, seed, i) -> int:
         return self.get_nums_for_ret_i(i).resolve(seed)
@@ -231,7 +243,6 @@ def test_big_sample():
                 my_rand = rc.big_sample_i(seed, i)
                 if my_rand != rand:
                     raise Exception("Missed one: my_rand: %d != %d (seed: %d, i:%d)" % (my_rand, rand, seed, i))
-            break
 
 
 # test_sampel_seed()
