@@ -23,6 +23,11 @@ class rand_vec:
         inv_add = (-1 * self.add * inv_mul) % self.p
         return rand_vec(inv_mul, inv_add)
 
+    def __call__(self, vec):
+        mul = self.mul * vec.mul
+        add = self.mul * vec.add + self.add
+        return rand_vec(mul, add)
+
 class csharp_rand:
     sa = {
         -55:  rand_vec(995627988, 1440537475),
@@ -109,11 +114,21 @@ def test_rand():
     with open("tests.json") as fp:
         for test in json.load(fp):
             seed = test["seed"]
+
+            z = rc.sample_equation(0)           # returns zero element given seed
+            f = rc.sample_equation(5).invert()  # given 5th element, returns seed
+            five_to_zero = z(f)                 # given 5th element returns 0th element
             for i, rand in enumerate(test["values"]):
                 my_rand = rc.sample(seed, i)
                 if my_rand != rand:
                     raise Exception("Missed one: my_rand: %d != %d (seed: %d, i:%d)" % (my_rand, rand, seed, i))
                 if seed != rc.inv(my_rand, i):
                     raise Exception("Inversion failed: my_rand: %d != %d (seed: %d, i:%d)" % (my_rand, rand, seed, i))
+
+                if i == 5: # got the 5th output
+                    zero = five_to_zero.resolve(rand)  # obtain the 0th aoutput
+                    t = test["values"][0]
+                    if zero != t:
+                        raise Exception(f"Failed to get item 0 from 5 using inversoin + composition of functions\n\tseed: {seed}, rand[5]: {rand}, rand[0]: {t} myzero: {zero}")
 
 test_rand()
