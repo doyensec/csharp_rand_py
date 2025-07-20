@@ -37,6 +37,7 @@ class rand_vec:
 
 class csharp_rand:
     sa = {
+        -56:  rand_vec(0, 0), # SeedArray[0] is unused?
         -55:  rand_vec(995627988, 1440537475),
         -54:  rand_vec(2027951972, 765327687),
         -53:  rand_vec(670659949, 2146736586),
@@ -98,6 +99,7 @@ class csharp_rand:
         """
         What constants are needed to produce the `i`th PRNG from Random?
         """
+        assert rand_i >= -56
         if ret := self.sa.get(rand_i, None):  # try from cache
             return ret
 
@@ -113,6 +115,13 @@ class csharp_rand:
 
     def inv(self, rand, i) -> int:
         return self.sample_equation(i).invert().resolve(rand)
+
+    def dump_seed_array(self, seed):
+        for i in range(0, 56):
+            myind = i - 56
+            val = self.sample(seed, myind)
+            print(f"SeedArray[{i}]: {val}")
+
 
 
 def test_rand():
