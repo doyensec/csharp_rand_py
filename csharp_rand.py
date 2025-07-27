@@ -3,28 +3,47 @@
 class rand_vec:
     p = 2147483647
 
-    def __init__(self, mul, add):
+    def __init__(self, mul, add, adjust=0):
         self.mul = mul % self.p  # multiplicitive componenet
         self.add = add % self.p  # additive component
         self.inname = "seed"
         self.onname = "rand"
+        self.adjust = adjust
 
     def __add__(self, other):
         return rand_vec(self.mul + other.mul, self.add + other.add)
 
     def __sub__(self, other):
-        return rand_vec(self.mul - other.mul, self.add - other.add)
+        add = self.add - other.add
+        mul = self.mul - other.mul
+        adjust = self.adjust - other.adjust
+        return rand_vec(mul, add, adjust=adjust)
 
-    def resolve(self, seed) -> int:
-        return (self.mul * seed + self.add) % self.p
+    def willoverflow(self, seed):
+        return 2309287046 - seed < (890002099 - 1150029940*seed) % self.p
+
+    def resolve(self, seed, fix=None) -> int:
+        if fix == None:
+            # test for overflow
+            fix = self.willoverflow(seed)
+
+        add = self.add
+        if fix:
+            add += self.adjust
+        return (self.mul * seed + add) % self.p
 
     def __str__(self):
-        return f"{self.onname} = {self.inname} * {self.mul} + {self.add} mod {self.p}"
+        if self.adjust == 0:
+            return f"{self.onname} = {self.inname} * {self.mul} + {self.add} mod {self.p}"
+        else:
+            return f"{self.onname} = {self.inname} * {self.mul} + {self.add} mod {self.p} ## overflow adjusted: {self.adjust}"
 
     def invert(self):
         inv_mul = pow(self.mul, self.p - 2, self.p)
         inv_add = (-1 * self.add * inv_mul) % self.p
-        out = rand_vec(inv_mul, inv_add)
+        inv_adjust = (-1 * self.adjust * inv_mul) % self.p
+
+        out = rand_vec(inv_mul, inv_add, adjust=inv_adjust)
         out.inname = self.onname
         out.onname = self.inname
         return out
@@ -47,21 +66,21 @@ class csharp_rand:
         -49:  rand_vec(1858282523, 1551822454),
         -48:  rand_vec(1148018271, 516845708),
         -47:  rand_vec(999900014, 711038571),
-        -46: rand_vec(1736516739, 375601216),
+        -46: rand_vec(1736516739, 375601216, adjust=-2),
         -45: rand_vec(1619128077, 90720238),
         -44: rand_vec(1661658864, 1217722896),
         -43: rand_vec(97972249, 1359409112),
         -42: rand_vec(841511239, 1800563293),
         -41: rand_vec(78873853, 1207831134),
         -40: rand_vec(326112986, 1779800029),
-        -39: rand_vec(677103352, 1721285135),
+        -39: rand_vec(677103352, 1721285135, adjust=-8),
         -38: rand_vec(521273686, 1169352262),
         -37: rand_vec(1006678640, 415583418),
         -36: rand_vec(1294841426, 1558532116),
         -35: rand_vec(1959318507, 2093921742),
         -34: rand_vec(2021211816, 2028425576),
         -33: rand_vec(1397840289, 1157618490),
-        -32: rand_vec(1317078317, 497420420),
+        -32: rand_vec(1317078317, 497420420, adjust=-6),
         -31: rand_vec(1630713386, 2065927110),
         -30: rand_vec(1440651009, 1065374271),
         -29: rand_vec(849729489, 1848423625),
@@ -71,7 +90,7 @@ class csharp_rand:
         -25: rand_vec(944629787, 1935309016),
         -24: rand_vec(37011316, 1611339912),
         -23: rand_vec(2132571007, 214172219),
-        -22: rand_vec(769165989, 784099),
+        -22: rand_vec(769165989, 784099, adjust=2),
         -21: rand_vec(1871755203, 792294212),
         -20: rand_vec(723179365, 1246161026),
         -19: rand_vec(1132448221, 1714587413),
@@ -85,14 +104,14 @@ class csharp_rand:
         -11: rand_vec(566863754, 427358340),
         -10: rand_vec(1420247719, 562813146),
         -9: rand_vec(59426012, 2082671328),
-        -8: rand_vec(1150881936, 1990117476),
+        -8: rand_vec(1150881936, 1990117476, adjust=12),
         -7: rand_vec(1712973778, 276974481),
         -6: rand_vec(1624979975, 540482400),
         -5: rand_vec(1152207519, 585067818),
         -4: rand_vec(151826624, 1533462053),
         -3: rand_vec(1618833120, 637827195),
         -2: rand_vec(1269016365, 1723484144),
-        -1: rand_vec(715327235, 25386146),
+        -1: rand_vec(715327235, 25386146, adjust=2),
     }
 
     def sample_equation(self, rand_i: int) -> rand_vec:
