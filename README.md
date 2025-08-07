@@ -44,7 +44,7 @@ Or you can use `.invert()` to go backwards, giving you the `Seed`.
 More complicated, obtain the 726th output of `Random` from the 725th.
 
 ```
->>> late = 724
+>>> late = 724 # 725th rand, zero indexed
 >>> late_rand = cs.sample_equation(late)
 >>> late_rand_plus = cs.sample_equation(late + 1)
 >>> late_to_late_plus = late_rand_plus(late_rand.invert())

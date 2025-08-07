@@ -9,9 +9,13 @@ class rand_vec:
         self.inname = "seed"
         self.onname = "rand"
         self.adjust = adjust
+        self.inverted = False
 
     def __add__(self, other):
-        return rand_vec(self.mul + other.mul, self.add + other.add)
+        mul = self.mul + other.mul
+        add = self.add + other.add
+        adjust = self.adjust + other.adjust
+        return rand_vec(mul, add, adjust=adjust)
 
     def __sub__(self, other):
         add = self.add - other.add
@@ -19,24 +23,40 @@ class rand_vec:
         adjust = self.adjust - other.adjust
         return rand_vec(mul, add, adjust=adjust)
 
-    def willoverflow(self, seed):
+    def seed_overflows(self, seed):
         return 2309287046 - seed < (890002099 - 1150029940*seed) % self.p
 
-    def resolve(self, seed, fix=None) -> int:
+    def resolve(self, seed: int, fix=None) -> int:
         if fix == None:
             # test for overflow
-            fix = self.willoverflow(seed)
+            s = seed
+            if self.inverted:
+                s = self.invert().resolve(seed)
+            fix = self.seed_overflows(s)
 
         add = self.add
         if fix:
             add += self.adjust
         return (self.mul * seed + add) % self.p
 
+    def resolve2(self, seed: int) -> (int, int|None):
+        """
+        The `resolve` method attempt to give you the  right
+        answer by being smart. You can't "outsmart" a inverted functino that is
+        not 1-to-1 though. So this just gives you both answeres. If no
+        adjustment value exists, it returns (value, None).
+        """
+        a = self.resolve(seed, fix=False)
+        b = None
+        if self.adjust != 0:
+            b = self.resolve(seed, fix=True)
+        return (a, b)
+
     def __str__(self):
         if self.adjust == 0:
             return f"{self.onname} = {self.inname} * {self.mul} + {self.add} mod {self.p}"
         else:
-            return f"{self.onname} = {self.inname} * {self.mul} + {self.add} mod {self.p} ## overflow adjusted: {self.adjust}"
+            return f"{self.onname} = {self.inname} * {self.mul} + {self.add} mod {self.p} underflow adjustment: {self.adjust}"
 
     def invert(self):
         inv_mul = pow(self.mul, self.p - 2, self.p)
@@ -46,12 +66,18 @@ class rand_vec:
         out = rand_vec(inv_mul, inv_add, adjust=inv_adjust)
         out.inname = self.onname
         out.onname = self.inname
+        out.inverted = not self.inverted
         return out
 
     def __call__(self, vec):
         mul = self.mul * vec.mul
         add = self.mul * vec.add + self.add
-        return rand_vec(mul, add)
+        adjust = self.mul * vec.adjust + self.adjust
+        out = rand_vec(mul, add, adjust=adjust)
+
+        # TODO not very confident with this part
+        out.inverted = self.inverted ^ vec.inverted
+        return out
 
 
 class csharp_rand:
@@ -132,8 +158,8 @@ class csharp_rand:
     def sample(self, seed, i) -> int:
         return self.sample_equation(i).resolve(seed)
 
-    def inv(self, rand, i) -> int:
-        return self.sample_equation(i).invert().resolve(rand)
+    def inv(self, rand, i, fix=None) -> int:
+        return self.sample_equation(i).invert().resolve(rand, fix=fix)
 
     def dump_seed_array(self, seed):
         for i in range(0, 56):
@@ -159,8 +185,9 @@ def test_rand():
                 if my_rand != rand:
                     raise Exception("Missed one: my_rand: %d != %d (seed: %d, i:%d)" % (my_rand, rand, seed, i))
 
-                if seed != rc.inv(my_rand, i):
-                    raise Exception("Inversion failed: my_rand: %d != %d (seed: %d, i:%d)" % (my_rand, rand, seed, i))
+                if seed != rc.inv(my_rand, i, fix=None):
+                    print(rc.sample_equation(i).invert().resolve2(my_rand))
+                    raise Exception(f"Inversion failed: seed: {seed} != rc.inv({my_rand}, {i}) == {rc.inv(my_rand, i)}")
 
                 if i == 5:  # got the 5th output
                     zero = five_to_zero.resolve(rand)  # obtain the 0th aoutput
