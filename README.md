@@ -5,7 +5,7 @@ This is an alternative, most mostly equivalent, re-implementation of C#'s
 
 This works by keeping everything in equations of the form `a * Seed + b mod p`.
 
-You can `ressolve` these equations for any `Seed` to get the output of some
+You can `resolve` these equations for any `Seed` to get the output of some
 `(new Random(Seed).Next...)`.
 
 You can do algebra on the equations to find other more complicated situations.
